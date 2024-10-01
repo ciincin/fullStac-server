@@ -1,7 +1,7 @@
 const pgPromise = require("pg-promise"); //import pg-promise library
 const bcrypt = require("bcrypt") // to hash the password
 const saltRounds = 10 // Define the number of salt rounds for bcrypt
-const db = pgPromise()("postgres://postgres:postgres@localhost:5432/postgres"); //Connect to the postgreSQL database using the connection string
+const db = pgPromise()("postgres://postgres:postgres@35.180.135.186:6000/postgres"); //Connect to the postgreSQL database using the connection string
 
 
 async function setupDB() {
@@ -36,6 +36,6 @@ async function setupDB() {
 }
 
 //Execute the setupDB function to set up the database
-//setupDB();
+setupDB();
 
 module.exports = db;
