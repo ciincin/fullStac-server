@@ -1,9 +1,10 @@
 const pgPromise = require("pg-promise"); //import pg-promise library
 const bcrypt = require("bcrypt") // to hash the password
 const saltRounds = 10 // Define the number of salt rounds for bcrypt
-const db = pgPromise()("postgres://postgres:postgres@35.180.135.186:6000/postgres"); //Connect to the postgreSQL database using the connection string
+const passwordServer = process.env.PASSWORD_SERVER 
+const db = pgPromise()(`postgres://postgres:${passwordServer}@35.180.135.186:6000/postgres`); //Connect to the postgreSQL database using the connection string
 
-
+const passwordDB = process.env.PASSWORD_DB_EXAMPLE
 async function setupDB() {
   //Drop the 'users' table if it exixt and create a new 'users' table
   await db.none(`
@@ -21,7 +22,7 @@ async function setupDB() {
 
 
   // Hash the password before inserting into the db
-  const hashedPassword = await bcrypt.hash('dummy', saltRounds)
+  const hashedPassword = await bcrypt.hash(passwordDB, saltRounds)
 
   // Insert a new user into the 'users' table
   await db.none(
