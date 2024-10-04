@@ -2,7 +2,10 @@ const pgPromise = require("pg-promise"); //import pg-promise library
 const bcrypt = require("bcrypt") // to hash the password
 const saltRounds = 10 // Define the number of salt rounds for bcrypt
 const passwordServer = process.env.PASSWORD_SERVER 
-const db = pgPromise()(`postgres://postgres:${passwordServer}@35.180.135.186:6000/postgres`); //Connect to the postgreSQL database using the connection string
+const portHTTPS = process.env.PORTHTTPS; // Gets the port from .env file
+
+
+const db = pgPromise()(`postgres://postgres:${passwordServer}@${portHTTPS}:6000/postgres`); //Connect to the postgreSQL database using the connection string
 
 const passwordDB = process.env.PASSWORD_DB_EXAMPLE
 async function setupDB() {
