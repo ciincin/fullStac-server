@@ -8,7 +8,11 @@ const https = require("https");
 const http = require("http");
 const fs = require("fs");
 
-dotenv.config(); // Loads enviroment variables from .env file
+dotenv.config({
+  path: process.env.ENV_PATH || ".env",
+});
+
+// Loads enviroment variables from .env file
 const app = express();
 const port = process.env.PORT; // Gets the port from .env file
 const portHTTPS = process.env.PORTHTTPS; // Gets the port from .env file
@@ -23,7 +27,7 @@ const privateKey = fs.readFileSync("./certs/privkey.pem", "utf8");
 const certificate = fs.readFileSync("./certs/cert.pem", "utf8");
 const ca = fs.readFileSync("./certs/chain.pem", "utf8");
 
-const credentials = {
+credentials = {
   key: privateKey,
   cert: certificate,
   ca: ca,

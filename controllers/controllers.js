@@ -5,9 +5,8 @@ const dotenv = require("dotenv"); // for enviroment variables
 dotenv.config(); // Load environment variables from .env file
 const bcrypt = require("bcrypt"); // to hash the password before save it in db
 const saltRounds = 10; //the legth of the hash password
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); 
-
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Define schema for user validation using Joi for user creation
 const userSchemaCreateUser = Joi.object({
@@ -16,14 +15,12 @@ const userSchemaCreateUser = Joi.object({
   username: Joi.string().alphanum().required(),
   email: Joi.string().email().required(), // Email must be a valid email format and is required
   password: Joi.string().min(6).required(), // Password must be at least 6 characters long and is required
-  image: Joi.string().uri().optional(), // Image is optional and must be a valid URI if provided
 });
 
 // Define schema for user validation using Joi for user updates
 const userSchemaUpdateUser = Joi.object({
   email: Joi.string().email().required(), // Email must be valid and is required
   password: Joi.string().min(6).required(), // Password must be at least 6 characters and is required
-  image: Joi.string().uri().optional(), // Image is optional and must be a valid URI if provided
 });
 
 // Define the controllers object with various methods to handle different routes
@@ -69,9 +66,9 @@ const controllers = {
 
   // Create a new user
   createUser: async (req, res) => {
-    const { firstname, lastname, username, email, password, image } = req.body; // Get user data from request body
+    const { firstname, lastname, username, email, password } = req.body; // Get user data from request body
 
-    const hashedPassword = await bcrypt.hash(password, saltRounds)
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Validate user input using Joi
     const validation = userSchemaCreateUser.validate({
@@ -80,7 +77,6 @@ const controllers = {
       username,
       email,
       password,
-      image,
     });
 
     if (validation.error) {
@@ -91,8 +87,8 @@ const controllers = {
     try {
       // Insert the new user into the database
       await db.none(
-        `INSERT INTO users (firstname, lastname, username, email, password, image) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [firstname, lastname, username, email, hashedPassword, image]
+        `INSERT INTO users (firstname, lastname, username, email, password) VALUES ($1, $2, $3, $4, $5)`,
+        [firstname, lastname, username, email, hashedPassword]
       );
 
       const usersList = await db.many(`SELECT * FROM users ORDER BY id`); // Fetch all users after insertion
@@ -118,33 +114,6 @@ const controllers = {
       res
         .status(500)
         .json({ msg: "Error deleting user", error: error.message }); // Handle errors with a 500 status
-    }
-  },
-
-  // Add an image to a user's profile
-  addUserImage: async (req, res) => {
-    const { id } = req.params; // Get the user ID from request parameters
-
-    if (!req.file || !req.file.path) {
-      res.status(400).json({ msg: "No image file uploaded" }); // If no image was uploaded, respond with a 400 error
-      return;
-    }
-
-    try {
-      //Update user image
-      await db.none(`UPDATE users SET image=$2 WHERE id=$1`, [
-        Number(id),
-        req.file.path,
-      ]);
-
-      //Fetch all users after update
-      const userList = await db.many(`SELECT * FROM users ORDER BY id`);
-
-      res.status(200).json({ userList, msg: "success!" }); // Respond with the updated user list and a success message
-    } catch (error) {
-      res
-        .status(500)
-        .json({ msg: "Error updating user image", error: error.message }); // Handle errors with a 500 status
     }
   },
 
@@ -210,7 +179,6 @@ const controllers = {
             username: user.username,
             firstname: user.firstname,
             lastname: user.lastname,
-            image: user.image,
           }; // Create a payload for the JWT
 
           const SECRET = process.env.SECRET; // Get the secret key from environment variables
@@ -231,7 +199,6 @@ const controllers = {
             username: user.username,
             firstname: user.firstname,
             lastname: user.lastname,
-            image: user.image,
           }); // Respond with the user ID, email, and token
         } else {
           res.status(400).json({ msg: "Username or password incorrect." }); // If authentication fails, respond with a 400 error
@@ -240,89 +207,82 @@ const controllers = {
         res.status(400).json({ msg: "Username or password incorrect." }); // If authentication fails, respond with a 400 error
       }
     } catch (error) {
-      res
-        .status(400)
-        .json({ msg: "Error log in user", error: error.message }); // Handle errors with a 400 status
+      res.status(400).json({ msg: "Error log in user", error: error.message }); // Handle errors with a 400 status
     }
   },
 
-  googleLogin: async (req,res)=>{
-    const {token}= req.body;
+  googleLogin: async (req, res) => {
+    const { token } = req.body;
     try {
       const ticket = await client.verifyIdToken({
-        idToken:token,
+        idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
-      })
+      });
 
-      const payload= ticket.getPayload()
-      const {firstname, lastname, username, email, image}= payload
-      
+      const payload = ticket.getPayload();
+      const { firstname, lastname, username, email } = payload;
 
-      let user = await db.oneOrNone(`SELECT * FROM users WHERE email = $1`, [email]);
+      let user = await db.oneOrNone(`SELECT * FROM users WHERE email = $1`, [
+        email,
+      ]);
 
       if (!user) {
         // Si el usuario no existe, puedes crear uno nuevo
         user = await db.one(
-          `INSERT INTO users (firstname, lastname, username, email, image) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [firstname, lastname, username, email, image]
+          `INSERT INTO users (firstname, lastname, username, email) VALUES ($1, $2, $3, $4) RETURNING *`,
+          [firstname, lastname, username, email]
         );
       }
 
       // Generar un token JWT
-    const payloadForToken = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      image: user.image,
-    };
+      const payloadForToken = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstname: user.firstname,
+        lastname: user.lastname,
+      };
 
-    const jwtToken = jwt.sign(payloadForToken, process.env.SECRET)
-    
-    // Configurar la cookie
-    res.cookie("token", jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-      maxAge: 3600000, // 1 hora
-    });
+      const jwtToken = jwt.sign(payloadForToken, process.env.SECRET);
 
-    res.status(200).json({
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      image: user.image,
-    });
+      // Configurar la cookie
+      res.cookie("token", jwtToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 3600000, // 1 hora
+      });
 
+      res.status(200).json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstname: user.firstname,
+        lastname: user.lastname,
+      });
     } catch (error) {
       res.status(400).json({ msg: "Google login error", error: error.message });
     }
   },
 
   // Handle user get info
-  getMyInfo: async(req, res)=>{
+  getMyInfo: async (req, res) => {
     const token = req.cookies.token; // access to cookies
     console.log("Token in request cookies", token);
-    
 
-    if(!token){
-      res.status(401).json({msg: "No token found"})
+    if (!token) {
+      res.status(401).json({ msg: "No token found" });
       return;
     }
 
     try {
       const SECRET = process.env.SECRET;
-      const decoded = jwt.verify(token, SECRET)
+      const decoded = jwt.verify(token, SECRET);
 
-      res.status(200).json({msg: "Token retrieved successfully", decoded})
-    } catch(error){
-      res.status(400).json({msg:"Invalid token", error:error.message})
+      res.status(200).json({ msg: "Token retrieved successfully", decoded });
+    } catch (error) {
+      res.status(400).json({ msg: "Invalid token", error: error.message });
     }
-
-    
   },
 
   // Handle user signup
@@ -356,7 +316,7 @@ const controllers = {
   // Handle user logout
   logOut: async (req, res) => {
     res.clearCookie("token");
-    res.status(200).json({msg: "Logout successful"})
+    res.status(200).json({ msg: "Logout successful" });
   },
 };
 
