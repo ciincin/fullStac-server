@@ -267,6 +267,8 @@ const controllers = {
 
   // Handle user get info
   getMyInfo: async (req, res) => {
+    console.log(req.cookies);
+
     const token = req.cookies.token; // access to cookies
     console.log("Token in request cookies", token);
 
