@@ -273,6 +273,7 @@ const controllers = {
     console.log("Token in request cookies", token);
 
     if (!token) {
+      console.log(`Este es el token: ${token}`);
       res.status(401).json({ msg: "No token found" });
       return;
     }
