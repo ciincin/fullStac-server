@@ -318,7 +318,12 @@ const controllers = {
 
   // Handle user logout
   logOut: async (req, res) => {
-    res.clearCookie("token");
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 0,
+    });
     res.status(200).json({ msg: "Logout successful" });
   },
 };
